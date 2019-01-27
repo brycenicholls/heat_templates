@@ -6,6 +6,15 @@ resources:
   my_instance:
     type: OS::Nova::Server
     properties:
-      key_name: bryce
-      image: 073743b4-2eb1-479e-8a30-e480de174141
-      flavor: m1.small
+      key_name: { get_param: key_name }
+      image: { get_param: image_name }
+      flavor: { get_param: flavor_name }
+
+  my_network:
+    type:
+    properties:
+
+  my_router:
+    type: 
+    properties:
+
