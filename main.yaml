@@ -1,4 +1,4 @@
-heat_template_version: 2016-10-14
+heat_template_version: 2013-05-23
 
 parameters:
   key_name:
@@ -36,9 +36,10 @@ parameters:
   private_net_pool_end:
     type: string
     description: End of private network IP address allocation pool
+  safe-1:
+    type: string
 
 resources:
- 
   my_lan_network:
     type: OS::Neutron::Net
     properties:
@@ -62,7 +63,33 @@ resources:
     properties:
       router_id: { get_resource: my_router }
       subnet_id: { get_resource: my_lan_subnet }
-
+  port_1:
+    type: OS::Neutron::Port
+    properties:
+      network_id: {get_resource: my_lan_network}
+      fixed_ips:
+        - subnet_id: {get_resource: my_lan_subnet}
+      security_groups: [{ get_resource: security_group }]  
+  floating_ip_1:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network: { get_param: public_net }
+      port_id: { get_resource: port_1 }
+  
+  
+  security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      description: Test group to demonstrate Neutron security group functionality with Heat.
+      name: test-security-group
+      rules: [
+        {remote_ip_prefix: {get_param: safe-1 },
+        protocol: tcp,
+        port_range_min: 22,
+        port_range_max: 22},
+        {remote_ip_prefix: {get_param: safe-1 },
+        protocol: icmp}]
+  
   my_instance:
     type: OS::Nova::Server
     properties:
@@ -70,3 +97,13 @@ resources:
       key_name: { get_param: key_name }
       image: { get_param: image_name }
       flavor: { get_param: instance_type }
+      networks:
+        - port: {get_resource: port_1}
+
+outputs:
+  server1_private_ip:
+    description: IP address of server1 in private network
+    value: { get_attr: [ my_instance, first_address ] }
+  server1_public_ip:
+    description: Floating IP address of server1 in public network
+    value: { get_attr: [ floating_ip_1, floating_ip_address ] }
